@@ -27,38 +27,65 @@ const loginError = document.getElementById('loginError');
 // 2. 登录与登出功能
 // ==========================================
 async function handleLogin() {
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value.trim();
-  
-  if (!username || !password) {
-    loginError.textContent = '请输入用户名和密码';
-    return;
-  }
-  
-  loginBtn.disabled = true;
-  loginBtn.textContent = '登录中...';
-  loginError.textContent = '';
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value.trim();
 
-  try {
-    // 从 users 表中查找匹配的用户
-    const { data, error } = await supabaseClient
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .eq('password', password) // 注意：实际项目中密码应加密或使用 Auth，这里为演示简化处理
-      .single();
+    // 1. 基础校验
+    if (!username || !password) {
+        loginError.textContent = "请输入用户名和密码";
+        return;
+    }
 
-    if (error || !data) throw new Error('用户名或密码错误');
+    console.log("正在尝试登录用户:", username); // 调试日志
 
-    // 登录成功，保存用户状态
-    currentUser = data;
-    showChatPage();
-  } catch (err) {
-    loginError.textContent = err.message;
-  } finally {
-    loginBtn.disabled = false;
-    loginBtn.textContent = '登录';
-  }
+    loginError.textContent = "";
+    loginBtn.disabled = true;
+    loginBtn.textContent = "登录中...";
+
+    try {
+        // 2. 查询 users 表
+        // 注意：这里假设你的数据库表名确实是 'users'
+        const { data, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('username', username)
+            .eq('password', password) // ⚠️ 警告：明文存储密码非常不安全，仅用于学习测试
+            .single();
+
+        console.log("数据库返回结果:", data, error); // 调试日志：看看到底查到了什么
+
+        // 3. 判断结果
+        if (error) {
+            // 如果是 PGRST116 错误，说明没找到人（Supabase single() 找不到数据会报错）
+            if (error.code === 'PGRST116') {
+                throw new Error("用户名或密码错误");
+            }
+            throw error;
+        }
+
+        if (!data) {
+            throw new Error("用户名或密码错误");
+        }
+
+        // 4. 登录成功
+        console.log("登录成功，用户信息:", data);
+        currentUser = data;
+
+        // 保存登录状态到本地（可选）
+        localStorage.setItem('chat_user', JSON.stringify(data));
+
+        showChatPage(); // 切换到聊天界面
+
+    } catch (err) {
+        console.error("登录捕获异常:", err);
+        loginError.textContent = err.message || "登录失败，请检查网络或数据库设置";
+    } finally {
+        // 5. 无论成功失败，都要恢复按钮状态
+        loginBtn.disabled = false;
+        loginBtn.textContent = "登录";
+    }
+}
+
 }
 
 function handleLogout() {
