@@ -1,145 +1,152 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聊天室</title>
-    <style>
-        body { font-family: sans-serif; background-color: #f4f4f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .chat-box { width: 100%; max-width: 400px; height: 600px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
-        .header { padding: 15px; background: #4a90e2; color: white; font-size: 18px; font-weight: bold; text-align: center; }
-        #chat-container { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .message { max-width: 75%; padding: 10px 15px; border-radius: 15px; word-wrap: break-word; font-size: 14px; }
-        .message-me { align-self: flex-end; background-color: #dcf8c6; border-bottom-right-radius: 0; }
-        .message-other { align-self: flex-start; background-color: #ffffff; border: 1px solid #ddd; border-bottom-left-radius: 0; }
-        .message-header { font-size: 11px; color: #888; margin-bottom: 3px; }
-        .input-area { display: flex; padding: 10px; border-top: 1px solid #eee; }
-        input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 20px; outline: none; font-size: 14px; }
-        button { margin-left: 10px; padding: 10px 20px; background: #4a90e2; color: white; border: none; border-radius: 20px; cursor: pointer; font-size: 14px; }
-        button:hover { background: #357abd; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>聊天室</title>
+  
+  <!-- 动态主题变量 -->
+  <style id="themeStyle">
+    :root {
+      --primary-color: #1890ff;
+      --primary-hover: #40a9ff;
+      --message-other-bg: #e6f4ff;
+      --message-other-text: #000;
+      --header-bg: #1890ff;
+      --send-btn-bg: #1890ff;
+      --send-btn-hover: #40a9ff;
+    }
+  </style>
+  
+  <style>
+    /* 全局基础样式 */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    body { background: #f0f2f5; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+
+    /* --- 登录页样式 --- */
+    #loginPage { display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; width: 100%; max-width: 400px; margin: 0 auto; }
+    .card { width: 100%; background: white; padding: 24px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+    h2 { text-align: center; margin-bottom: 24px; color: #1a1a1a; font-size: 24px; }
+    input[type="text"], input[type="password"] { width: 100%; padding: 14px 16px; margin-bottom: 16px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; outline: none; transition: all 0.3s;}
+    input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2); }
+    button { width: 100%; padding: 14px; background: var(--primary-color); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s;}
+    button:hover { background: var(--primary-hover); }
+    .error { color: #ff4d4f; text-align: center; min-height: 20px; margin-top: 8px; font-size: 14px; }
+    /* --- 聊天页样式 --- */
+    #chatPage { display: none; flex-direction: column; height: 100vh; width: 100%; max-width: 800px; margin: 0 auto; background: white; }
+    #header { padding: 12px 16px; background: var(--header-bg); color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); position: relative; }
+    #header h3 { font-size: 18px; font-weight: 600; }
+    
+    /* 设置按钮与菜单 */
+    #settingsBtn { background: none; border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 14px; padding: 4px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap; min-width: auto; width: auto; transition: all 0.2s;}
+    #settingsBtn:hover { background: rgba(255,255,255,0.2); }
+    #settingsMenu { position: absolute; top: 48px; right: 16px; background: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100; display: none; min-width: 160px; overflow: hidden; }
+    .menu-item { padding: 12px 16px; cursor: pointer; font-size: 14px; color: #333; transition: background 0.2s; }
+    .menu-item:hover { background: #f5f5f5; }
+    .menu-divider { height: 1px; background: #eee; }
+
+    /* 消息列表区 */
+    #messages { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+    .message { max-width: 75%; padding: 12px 16px; border-radius: 18px; line-height: 1.4; word-break: break-word; }
+    .message.me { background: white; color: black; align-self: flex-end; border: 1px solid #ddd; border-bottom-right-radius: 4px; }
+    .message.other { background: var(--message-other-bg); color: var(--message-other-text); align-self: flex-start; border: 1px solid var(--primary-color); border-bottom-left-radius: 4px; }
+    .message-header { font-size: 12px; opacity: 0.8; margin-bottom: 4px; display: block; font-weight: bold; }
+
+    /* 底部输入区 */
+    #inputArea { padding: 12px; background: white; border-top: 1px solid #eee; display: flex; gap: 8px; align-items: center; }
+    #msgInput { flex: 1; padding: 12px 16px; border: 1px solid #ddd; border-radius: 24px; font-size: 16px; outline: none; max-height: 100px; resize: none; transition: border-color 0.3s;}
+    #msgInput:focus { border-color: var(--primary-color); }
+    #sendBtn { width: auto; padding: 0 20px; height: 44px; border-radius: 24px; background: var(--send-btn-bg); transition: background 0.2s;}
+    #sendBtn:hover { background: var(--send-btn-hover); }
+    #charCount { font-size: 12px; color: #888; margin-left: 8px; white-space: nowrap; }
+    /* --- 模态框与账号管理样式 --- */
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+    .modal-content { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 350px; max-height: 80vh; overflow-y: auto; }
+    .modal h4 { margin-top: 0; color: #333; text-align: center; margin-bottom: 12px; }
+    .modal-buttons { display: flex; gap: 8px; margin-top: 16px; }
+    .modal-buttons button { flex: 1; padding: 8px; font-size: 14px; }
+
+    /* 账号管理相关样式 */
+    .account-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+    .account-name { font-weight: 500; }
+    .account-role { font-size: 12px; color: #888; margin-top: 2px; }
+    .delete-btn { background: #ff4d4f; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 12px; cursor: pointer; transition: opacity 0.2s;}
+    .delete-btn:hover { opacity: 0.8; }
+    .delete-btn:disabled { background: #ccc; cursor: not-allowed; }
+    .role-select { margin: 10px 0; }
+    .role-select label { display: block; margin: 6px 0; font-size: 14px; cursor: pointer; }
+    .role-select input { margin-right: 6px; }
+
+    /* 大屏幕自适应优化 */
+    @media (min-width: 768px) {
+      #loginPage { padding: 40px 20px; }
+      .card { padding: 32px; }
+      #messages { padding: 24px; }
+      .message { max-width: 60%; }
+    }
+  </style>
 </head>
 <body>
-    <div class="chat-box">
-        <div class="header">聊天室 (<span id="username-display"></span>)</div>
-        <div id="chat-container"></div>
-        <div class="input-area">
-            <input type="text" id="message-input" placeholder="输入消息...">
-            <button id="send-button">发送</button>
-        </div>
+  <!-- 登录页 -->
+  <div id="loginPage">
+    <div class="card">
+      <h2>聊天室</h2>
+      <input type="text" id="username" placeholder="用户名" autocomplete="off" autofocus />
+      <input type="password" id="password" placeholder="密码" />
+      <button id="loginBtn">登录</button>
+      <div class="error" id="loginError"></div>
     </div>
-<script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+  </div>
 
-    // ⚠️ 请替换为你自己的 Supabase URL 和 Key
-    const SUPABASE_URL = 'https://xdyfxuhlalwihohzffcr.supabase.co
+  <!-- 聊天页 -->
+  <div id="chatPage">
+    <div id="header">
+      <h3>聊天室</h3>
+      <button id="settingsBtn">设置</button>
+      <div id="settingsMenu">
+        <div class="menu-item" id="clearMsgsBtn">🗑️ 清空本地聊天记录</div>
+        <div class="menu-item" id="toggleThemeBtn">🎨 切换主题</div>
+        <div class="menu-item" id="logoutBtn">🚪 退出登录</div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" id="createUserItem" style="display:none;">👤 创建新账号</div>
+        <div class="menu-item" id="manageAccountsItem" style="display:none;">🔑 账号管理</div>
+      </div>
+    </div>
 
-'; 
-    const SUPABASE_KEY = 'sb_publishable_Yj-KNZPLi4mPgiAduODQ-A_2WDYQxdg'; 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    <div id="messages"></div>
 
-    // DOM 元素引用
-    const chatContainer = document.getElementById('chat-container');
-    const messageInput = document.getElementById('message-input');
-    const sendButton = document.getElementById('send-button');
-    const usernameDisplay = document.getElementById('username-display');
+    <div id="inputArea">
+      <textarea id="msgInput" placeholder="输入消息（最多10000字）..." rows="1"></textarea>
+      <span id="charCount">0 / 10000</span>
+      <button id="sendBtn">发送</button>
+    </div>
+  </div>
 
-    // 生成或获取随机用户名
-    let currentUser = localStorage.getItem('chat_username');
-    if (!currentUser) {
-        currentUser = 'User_' + Math.floor(Math.random() * 10000);
-        localStorage.setItem('chat_username', currentUser);
-    }
-    usernameDisplay.textContent = currentUser;
+  <!-- 创建账号弹窗 -->
+  <div id="createForm" class="modal">
+    <div class="modal-content">
+      <h4>👤 创建新账号</h4>
+      <input type="text" id="newUser" placeholder="新用户名" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:6px;" />
+      <input type="password" id="newPass" placeholder="新密码" style="width:100%; padding:10px; margin:8px 0; border:1px solid #ddd; border-radius:6px;" />
+      <div class="role-select" id="roleSelectContainer"></div>
+      <div class="modal-buttons">
+        <button id="hideCreateFormBtn" style="background:#ccc;">取消</button>
+        <button id="confirmCreateBtn" style="background:var(--primary-color); color:white;">创建</button>
+      </div>
+      <div id="createMsg" style="color:#52c41a; font-size:14px; min-height:18px; margin-top:8px; text-align:center;"></div>
+    </div>
+  </div>
 
-    // 发送消息函数
-    async function sendMessage() {
-        const content = messageInput.value.trim();
-        if (!content) return;
-        try {
-            await supabase.from('messages').insert([{ content: content, username: currentUser, created_at: new Date().toISOString() }]);
-            messageInput.value = '';
-        } catch (err) { console.error('发送失败:', err); }
-    }
-
-    // 渲染单条消息到界面
-    function renderMessage(msg) {
-        const isMe = msg.username === currentUser;
-        const msgDiv = document.createElement('div');
-        msgDiv.className = `message ${isMe ? 'message-me' : 'message-other'}`;
-        const time = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        msgDiv.innerHTML = `<div class="message-header"><span class="message-user">${msg.username}</span><span class="message-time">${time}</span></div><div class="message-content">${escapeHtml(msg.content)}</div>`;
-        chatContainer.appendChild(msgDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-
-    // 防 XSS 攻击的简单转义
-    function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
-
-    // 加载历史消息
-    async function loadMessages() {
-        try {
-            const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true }).limit(50);
-            if (error) throw error;
-            chatContainer.innerHTML = ''; 
-            data.forEach(renderMessage);
-        } catch (err) { console.error('加载历史消息失败:', err); }
-    }
-
-    // 监听实时消息
-    function subscribeToMessages() {
-        supabase.channel('public:messages')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => { renderMessage(payload.new); })
-            .subscribe();
-    }
-
-    // 事件绑定与启动
-    sendButton.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-    loadMessages();
-    subscribeToMessages();
-</script>
-<!-- 在线用户列表区域 -->
-<div id="online-users" style="padding: 10px; background: #f8f9fa; border-bottom: 1px solid #eee; font-size: 12px; color: #666;">
-    <strong>在线用户：</strong><span id="user-list">加载中...</span>
-</div>
-
-<script>
-// 更新在线用户列表显示
-function updateOnlineUsers(users) {
-    const userListEl = document.getElementById('user-list');
-    if (users && users.length > 0) {
-        userListEl.textContent = users.join(', ');
-    } else {
-        userListEl.textContent = '暂无在线用户';
-    }
-}
-
-// 显示系统消息（如用户加入/离开）
-function showSystemMessage(text) {
-    const sysDiv = document.createElement('div');
-    sysDiv.style.cssText = 'text-align: center; font-size: 12px; color: #999; padding: 5px 0;';
-    sysDiv.textContent = `[系统] ${text}`;
-    chatContainer.appendChild(sysDiv);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-</script>
-<style>
-    /* 在线用户列表悬浮效果 */
-    #online-users { transition: background-color 0.3s; }
-    #online-users:hover { background-color: #e9ecef; }
-    
-    /* 消息气泡动画 */
-    .message { animation: fadeIn 0.3s ease-in-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-</style>
-
-<script>
-// 初始化时显示欢迎消息
-window.addEventListener('DOMContentLoaded', () => {
-    showSystemMessage(`欢迎回来，${currentUser}！`);
-    updateOnlineUsers([]); // 初始化为空，后续可通过 Supabase 实时更新
-});
-</script>
-</body>
+  <!-- 账号管理弹窗 -->
+  <div id="accountManager" class="modal">
+    <div class="modal-content">
+      <h4>🔑 账号管理</h4>
+      <div id="accountList" style="margin-top:12px;"></div>
+      <div class="modal-buttons">
+        <button id="hideAccountManagerBtn" style="background:var(--primary-color); color:white;">关闭</button>
+      </div>
+    </div>
+  </div>
+  <!-- 引入我们的大脑 app.js -->
+  <script src="./app.js">
 </html>
