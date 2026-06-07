@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supabase + Netlify 全栈应用</title>
+    <style>
+        /* 全局样式设置 */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, sans-serif; background-color: #f9fafb; color: #333; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        
+        /* 卡片容器样式 */
+        .card { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        h1 { font-size: 1.5rem; margin-bottom: 1rem; color: #1f2937; }
+        p { font-size: 0.9rem; color: #6b7280; margin-bottom: 1.5rem; }
+        
+        /* 按钮样式 */
+        button { background-color: #3ecf8e; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #32b87d; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🚀 欢迎使用 Supabase</h1>
+        <p id="status-text">正在连接后端...</p>
+        <button id="fetch-btn" onclick="fetchData()">获取数据</button>
+    </div>
+
+    <script>
+        // 第一段：基础的前端交互逻辑
+        const statusText = document.getElementById('status-text');
+        
+        async function fetchData() {
+            statusText.textContent = '请求中...';
+            try {
+                // TODO: 后续将在这里接入 Supabase 客户端
+                console.log('准备请求 Supabase 数据库...');
+                await new Promise(resolve => setTimeout(resolve, 500)); // 模拟网络延迟
+                statusText.textContent = '✅ 前端展示正常！等待后端接入...';
+            } catch (error) {
+                statusText.textContent = '❌ 发生错误: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
