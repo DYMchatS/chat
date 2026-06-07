@@ -1,165 +1,135 @@
-// 第二段：引入并初始化 Supabase 客户端库
-// 在实际项目中，建议通过 npm install @supabase/supabase-js 安装后使用 import 语法
-// const { createClient } = require('@supabase/supabase-js'); 
+// ✅ 正确的代码（请复制这一段）
+import { useState, useEffect } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
-// 从环境变量或安全配置中获取你的 Supabase URL 和 API Key
-const SUPABASE_URL = 'https://xdyfxuhlalwihohzffcr.supabase.co
+// 1. 初始化 Supabase 客户端
+// 这里会读取你在 Netlify 设置的环境变量
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-'; 
-const SUPABASE_ANON_KEY = 'sb_publishable_Yj-KNZPLi4mPgiAduODQ-A_2WDYQxdg'; 
+function App() {
+  const [session, setSession] = useState(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [messages, setMessages] = useState([])
+  const [newMessage, setNewMessage] = useState('')
 
-// 创建 Supabase 客户端实例
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  // 2. 检查当前是否有用户登录
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+    })
 
-/**
- * 核心数据获取函数
- */
-async function fetchData() {
-    statusText.textContent = '正在请求 Supabase 后端...';
-    
-    try {
-        // 示例：从名为 'messages' 的表中查询最新的数据
-        const { data, error } = await supabase
-            .from('messages')       // 替换为你实际的表名
-            .select('*')            // 查询所有字段
-            .order('created_at', { ascending: false }) // 按时间倒序排列
-            .limit(10);             // 限制返回条数
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
 
-        if (error) throw error;     // 如果发生错误则抛出异常
+    return () => subscription.unsubscribe()
+  }, [])
 
-        console.log('成功获取到数据:', data);
-        statusText.textContent = `✅ 成功加载 ${data.length} 条数据！`;
-        
-        // TODO: 下一步将在这里渲染列表内容
-    } catch (err) {
-        console.error('获取数据失败:', err.message);
-        statusText.textContent = '❌ 数据库请求失败: ' + err.message;
+  // 3. 登录/注册函数
+  const handleAuth = async (type) => {
+    setLoading(true)
+    const { error } = type === 'login'
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({ email, password })
+
+    if (error) alert(error.message)
+    setLoading(false)
+  }
+
+  // 4. 获取消息
+  const fetchMessages = async () => {
+    const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true })
+    if (!error) setMessages(data)
+  }
+
+  // 登录后自动获取消息
+  useEffect(() => {
+    if (session) fetchMessages()
+  }, [session])
+
+  // 5. 发送消息
+  const sendMessage = async (e) => {
+    e.preventDefault()
+    if (!newMessage.trim()) return
+
+    const { error } = await supabase.from('messages').insert([
+      { content: newMessage, user_id: session.user.id }
+    ])
+
+    if (!error) {
+      setNewMessage('')
+      fetchMessages() // 发送后刷新列表
     }
+  }
+
+  // --- 界面渲染部分 ---
+
+  // 如果没登录，显示登录框
+  if (!session) {
+    return (
+      <div style={{ maxWidth: '400px', margin: '50px auto', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
+        <h2>🔐 聊天室登录</h2>
+        <input
+          type="email"
+          placeholder="邮箱"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box' }}
+        />
+        <input
+          type="password"
+          placeholder="密码"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ width: '100%', padding: '10px', marginBottom: '10px', boxSizing: 'border-box' }}
+        />
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button onClick={() => handleAuth('login')} disabled={loading} style={{ flex: 1, padding: '10px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px' }}>
+            {loading ? '处理中...' : '登录'}
+          </button>
+          <button onClick={() => handleAuth('signup')} disabled={loading} style={{ flex: 1, padding: '10px', background: '#28a745', color: 'white', border: 'none', borderRadius: '4px' }}>
+            注册
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // 如果已登录，显示聊天界面
+  return (
+    <div style={{ maxWidth: '600px', margin: '20px auto', padding: '20px', fontFamily: 'sans-serif' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3>💬 在线聊天室</h3>
+        <button onClick={() => supabase.auth.signOut()} style={{ padding: '5px 10px', cursor: 'pointer' }}>退出登录</button>
+      </div>
+
+      <div style={{ height: '400px', overflowY: 'scroll', border: '1px solid #eee', padding: '10px', marginBottom: '10px', background: '#f9f9f9' }}>
+        {messages.length === 0 ? <p style={{textAlign:'center', color:'#999'}}>暂无消息，快来聊两句吧！</p> : messages.map((msg) => (
+          <div key={msg.id} style={{ marginBottom: '8px', padding: '8px', background: 'white', borderRadius: '4px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+            <strong style={{ fontSize: '0.8em', color: '#666' }}>{msg.user_id.slice(0, 6)}...:</strong>
+            <div>{msg.content}</div>
+          </div>
+        ))}
+      </div>
+
+      <form onSubmit={sendMessage} style={{ display: 'flex', gap: '10px' }}>
+        <input
+          type="text"
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+          placeholder="输入消息..."
+          style={{ flex: 1, padding: '10px', borderRadius: '4px', border: '1px solid #ccc' }}
+        />
+        <button type="submit" style={{ padding: '10px 20px', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>发送</button>
+      </form>
+    </div>
+  )
 }
-// 第三段：完善前端逻辑，将获取到的数据动态渲染到页面上
 
-/**
- * 核心数据获取并渲染函数
- */
-async function fetchData() {
-    const statusText = document.getElementById('status-text');
-    const card = document.querySelector('.card'); // 获取卡片容器用于追加列表
-    
-    statusText.textContent = '正在请求 Supabase 后端...';
-    
-    try {
-        // 从 'messages' 表中查询最新的数据
-        const { data, error } = await supabase
-            .from('messages')       
-            .select('*')            
-            .order('created_at', { ascending: false }) 
-            .limit(10);             
-
-        if (error) throw error;     
-
-        // 更新状态提示
-        statusText.textContent = `✅ 成功加载 ${data.length} 条数据！`;
-        
-        // 如果之前有渲染过列表，先清空旧内容
-        const oldList = document.getElementById('data-list');
-        if (oldList) oldList.remove();
-
-        // 创建列表元素并遍历渲染数据
-        if (data.length > 0) {
-            const ul = document.createElement('ul');
-            ul.id = 'data-list';
-            ul.style.textAlign = 'left';
-            ul.style.marginTop = '1rem';
-            ul.style.listStyleType = 'none';
-            
-            data.forEach(item => {
-                const li = document.createElement('li');
-                li.style.padding = '0.5rem 0';
-                li.style.borderBottom = '1px solid #eee';
-                li.innerHTML = `<strong>${item.title || '无标题'}</strong>: ${item.content || '无内容'}`;
-                ul.appendChild(li);
-            });
-            
-            card.appendChild(ul);
-        } else {
-            statusText.textContent = '⚠️ 数据库中暂无数据';
-        }
-        
-    } catch (err) {
-        console.error('获取数据失败:', err.message);
-        statusText.textContent = '❌ 数据库请求失败: ' + err.message;
-    }
-}
-// 第四段：解决跨域问题并完善前后端通信配置
-
-/**
- * 1. 创建 Supabase 客户端时，建议使用环境变量注入地址（以 Vite/React 等为例）
- */
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://your-project-url.supabase.co'; 
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-public-anon-key'; 
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-/**
- * 2. Netlify 代理配置说明（需要在项目根目录创建 netlify.toml 文件）
- * 
- * [[redirects]]
- *   from = "/api/*"
- *   to = "https://your-project-url.supabase.co/rest/v1/:splat"
- *   status = 200
- *   force = true
- * 
- * 作用：将前端的 /api/ 请求透明代理到 Supabase REST API，避免浏览器跨域拦截。
- */
-
-/**
- * 3. 核心数据获取并渲染函数（适配代理后的路径逻辑）
- */
-async function fetchData() {
-    const statusText = document.getElementById('status-text');
-    const card = document.querySelector('.card'); 
-    
-    statusText.textContent = '正在请求后端数据...';
-    
-    try {
-        // 使用 Supabase JS SDK 发起查询（SDK 会自动处理鉴权头和路径拼接）
-        const { data, error } = await supabase
-            .from('messages')       
-            .select('*')            
-            .order('created_at', { ascending: false }) 
-            .limit(10);             
-
-        if (error) throw error;     
-
-        statusText.textContent = `✅ 成功加载 ${data.length} 条数据！`;
-        
-        // 清理旧列表
-        const oldList = document.getElementById('data-list');
-        if (oldList) oldList.remove();
-
-        // 动态渲染新列表
-        if (data.length > 0) {
-            const ul = document.createElement('ul');
-            ul.id = 'data-list';
-            ul.style.textAlign = 'left';
-            ul.style.marginTop = '1rem';
-            ul.style.listStyleType = 'none';
-            
-            data.forEach(item => {
-                const li = document.createElement('li');
-                li.style.padding = '0.5rem 0';
-                li.style.borderBottom = '1px solid #eee';
-                li.innerHTML = `<strong>${item.title || '无标题'}</strong>: ${item.content || '无内容'}`;
-                ul.appendChild(li);
-            });
-            
-            card.appendChild(ul);
-        } else {
-            statusText.textContent = '⚠️ 数据库中暂无数据';
-        }
-        
-    } catch (err) {
-        console.error('获取数据失败:', err.message);
-        statusText.textContent = '❌ 数据库请求失败: ' + err.message;
-    }
-}
+export default App
